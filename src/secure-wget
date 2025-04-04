@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Define whitelist patterns directly in the script
+WHITELIST=(
+    "https://example.com/"
+    "https://trusted-domain.org/downloads/"
+    "http://internal-server.local/"
+    # Add more allowed patterns here
+)
+
+# Fixed download directory
+DOWNLOAD_DIR="/var/downloads/secure"
+
+# Validate input
+[ -z "$1" ] && { echo "Usage: $0 <url> [output_filename]"; exit 1; }
+
+URL="$1"
+OUTPUT_FILE="$2"
+
+# Create download directory if it doesn't exist
+mkdir -p "$DOWNLOAD_DIR" || { echo "Error: Cannot create download directory"; exit 3; }
+
+# Check URL against whitelist patterns
+for pattern in "${WHITELIST[@]}"; do
+    # Skip empty patterns
+    [ -z "$pattern" ] && continue
+    
+    # Download if URL matches pattern
+    if [[ "$URL" == "$pattern"* ]]; then
+        # Change to download directory
+        cd "$DOWNLOAD_DIR" || { echo "Error: Cannot change to download directory"; exit 3; }
+        
+        # Download with specified filename or default name
+        if [ -n "$OUTPUT_FILE" ]; then
+            echo "Downloading to $DOWNLOAD_DIR/$OUTPUT_FILE: $URL"
+            wget -O "$OUTPUT_FILE" "$URL" || { echo "Download failed"; exit 2; }
+            echo "Downloaded to: $DOWNLOAD_DIR/$OUTPUT_FILE"
+        else
+            echo "Downloading to $DOWNLOAD_DIR: $URL"
+            wget "$URL" || { echo "Download failed"; exit 2; }
+            echo "Downloaded to: $DOWNLOAD_DIR/$(basename "$URL")"
+        fi
+        exit 0
+    fi
+done
+
+# URL not in whitelist
+echo "Access denied: URL not in whitelist"
+exit 1
